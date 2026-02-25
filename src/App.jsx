@@ -33,7 +33,7 @@ function imageDataToDataUrl(imageData, size = 64) {
   return small.toDataURL('image/png')
 }
 
-async function runPipelineForGlyphIndices(fontData, indices, pixelateBlockSize, shiftX, shiftY) {
+async function runPipelineForGlyphIndices(fontData, indices, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius) {
   const { unitsPerEm, ascender, descender, familyName } = fontData
   const viewBox = {
     minX: 0,
@@ -44,7 +44,7 @@ async function runPipelineForGlyphIndices(fontData, indices, pixelateBlockSize, 
   const glyphsData = []
   for (let i = 0; i < indices.length; i++) {
     const g = fontData.glyphs[indices[i]]
-    const imageData = processGlyphToImageData(g.path, viewBox, pixelateBlockSize, shiftX, shiftY)
+    const imageData = processGlyphToImageData(g.path, viewBox, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius)
     const svgString = vectorizeImageData(imageData, viewBox, 0)
     if (svgString) {
       glyphsData.push({
@@ -72,6 +72,8 @@ const TICK_MS = 100
 function App() {
   const [fontData, setFontData] = useState(null)
   const [pixelateBlockSize, setPixelateBlockSize] = useState(8)
+  const [pixelRatio, setPixelRatio] = useState(1)
+  const [blurRadius, setBlurRadius] = useState(0)
   const [shiftX, setShiftX] = useState(0)
   const [shiftY, setShiftY] = useState(0)
   const [processing, setProcessing] = useState(false)
@@ -118,7 +120,7 @@ function App() {
       return
     }
     const run = () => {
-      runPipelineForGlyphIndices(fontData, previewGlyphIndices, pixelateBlockSize, shiftX, shiftY)
+      runPipelineForGlyphIndices(fontData, previewGlyphIndices, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius)
         .then(({ blob, previewText: text }) => {
           setPreviewFontBlob(blob)
           setPreviewText(text)
@@ -130,7 +132,7 @@ function App() {
     return () => {
       if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current)
     }
-  }, [fontData, previewGlyphIndices, pixelateBlockSize, shiftX, shiftY])
+  }, [fontData, previewGlyphIndices, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius])
 
   useEffect(() => {
     if (!fontData || fontData.glyphs.length < 4) return
@@ -173,7 +175,7 @@ function App() {
       const glyphsData = []
       for (let i = 0; i < total; i++) {
         const g = fontData.glyphs[i]
-        const imageData = processGlyphToImageData(g.path, viewBox, pixelateBlockSize, shiftX, shiftY)
+        const imageData = processGlyphToImageData(g.path, viewBox, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius)
         const dataUrl = imageDataToDataUrl(imageData, 80)
         setGenerationGlyphPreviews((prev) => [...prev, { unicode: g.unicode, dataUrl }])
         setGenerationProgress({ current: i + 1, total })
@@ -202,7 +204,7 @@ function App() {
     } finally {
       setProcessing(false)
     }
-  }, [fontData, pixelateBlockSize, shiftX, shiftY])
+  }, [fontData, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius])
 
   const [previewFontUrl, setPreviewFontUrl] = useState(null)
   useEffect(() => {
@@ -225,13 +227,15 @@ function App() {
             onChange={handleFileChange}
             className="hidden"
           />
-          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={processing}>
-            Upload font
-          </Button>
+          {!fontData && (
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={processing}>
+              Upload font
+            </Button>
+          )}
           {fontData && (
             <>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[var(--color-muted-foreground)]">Pixel</span>
+                <span className="text-xs text-[var(--color-muted-foreground)]">Size</span>
                 <Slider
                   value={[pixelateBlockSize]}
                   onValueChange={([v]) => setPixelateBlockSize(v)}
@@ -241,6 +245,30 @@ function App() {
                   className="w-24"
                 />
                 <span className="w-6 text-right text-xs text-[var(--color-muted-foreground)]">{pixelateBlockSize}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[var(--color-muted-foreground)]">Ratio</span>
+                <Slider
+                  value={[pixelRatio]}
+                  onValueChange={([v]) => setPixelRatio(v)}
+                  min={0}
+                  max={2}
+                  step={0.05}
+                  className="w-24"
+                />
+                <span className="w-8 text-right text-xs text-[var(--color-muted-foreground)]">{pixelRatio}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[var(--color-muted-foreground)]">Blur</span>
+                <Slider
+                  value={[blurRadius]}
+                  onValueChange={([v]) => setBlurRadius(v)}
+                  min={0}
+                  max={10}
+                  step={0.5}
+                  className="w-24"
+                />
+                <span className="w-8 text-right text-xs text-[var(--color-muted-foreground)]">{blurRadius}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-[var(--color-muted-foreground)]">X</span>

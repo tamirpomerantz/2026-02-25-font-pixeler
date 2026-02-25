@@ -28,14 +28,16 @@ export function invertColors(canvas) {
  * Applies pixelate effect: draw to smaller canvas then scale up without smoothing.
  * @param {HTMLCanvasElement} canvas - Input canvas
  * @param {number} blockSize - Pixel block size (1 = no effect, larger = more pixelated)
+ * @param {number} pixelRatio - Width/height of each pixel (1 = square, >1 = wider, <1 = taller)
  * @returns {HTMLCanvasElement} - New canvas with pixelation applied
  */
-export function applyPixelate(canvas, blockSize) {
+export function applyPixelate(canvas, blockSize, pixelRatio = 1) {
   if (blockSize <= 1) return canvas;
   const w = canvas.width;
   const h = canvas.height;
-  const smallW = Math.max(1, Math.floor(w / blockSize));
+  const ratio = Math.max(0.1, pixelRatio);
   const smallH = Math.max(1, Math.floor(h / blockSize));
+  const smallW = Math.max(1, Math.floor(w / (blockSize * ratio)));
 
   const small = document.createElement('canvas');
   small.width = smallW;
@@ -50,6 +52,25 @@ export function applyPixelate(canvas, blockSize) {
   const resultCtx = result.getContext('2d', { willReadFrequently: true });
   resultCtx.imageSmoothingEnabled = false;
   resultCtx.drawImage(small, 0, 0, smallW, smallH, 0, 0, w, h);
+  return result;
+}
+
+/**
+ * Applies a blur filter to soften edges.
+ * @param {HTMLCanvasElement} canvas - Input canvas
+ * @param {number} radius - Blur radius in pixels (0 = no blur)
+ * @returns {HTMLCanvasElement} - New canvas with blur applied
+ */
+export function applyBlur(canvas, radius) {
+  if (radius <= 0) return canvas;
+  const w = canvas.width;
+  const h = canvas.height;
+  const result = document.createElement('canvas');
+  result.width = w;
+  result.height = h;
+  const ctx = result.getContext('2d', { willReadFrequently: true });
+  ctx.filter = `blur(${radius}px)`;
+  ctx.drawImage(canvas, 0, 0);
   return result;
 }
 
@@ -75,21 +96,26 @@ export function applyPixelShift(canvas, shiftX, shiftY) {
 }
 
 /**
- * Full pipeline for one glyph: render -> optional shift -> pixelate -> ImageData (black glyph on white for tracer).
+ * Full pipeline for one glyph: render -> optional shift -> pixelate -> optional blur -> ImageData.
  * @param {string} svgPath - SVG path in font units
  * @param {Object} viewBox - { minX, minY, w, h }
  * @param {number} pixelateBlockSize - Block size for pixelation (1 = none)
  * @param {number} shiftX - Pixel X offset before pixelation (0 = none)
  * @param {number} shiftY - Pixel Y offset before pixelation (0 = none)
+ * @param {number} pixelRatio - Width/height of each pixel (1 = square)
+ * @param {number} blurRadius - Blur in pixels (0 = none)
  * @returns {ImageData} - ImageData ready for vectorizeImageData
  */
-export function processGlyphToImageData(svgPath, viewBox, pixelateBlockSize = 1, shiftX = 0, shiftY = 0) {
+export function processGlyphToImageData(svgPath, viewBox, pixelateBlockSize = 1, shiftX = 0, shiftY = 0, pixelRatio = 1, blurRadius = 0) {
   let canvas = renderGlyphToCanvas(svgPath, viewBox);
   if (shiftX !== 0 || shiftY !== 0) {
     canvas = applyPixelShift(canvas, shiftX, shiftY);
   }
   if (pixelateBlockSize > 1) {
-    canvas = applyPixelate(canvas, pixelateBlockSize);
+    canvas = applyPixelate(canvas, pixelateBlockSize, pixelRatio);
+  }
+  if (blurRadius > 0) {
+    canvas = applyBlur(canvas, blurRadius);
   }
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
