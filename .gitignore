@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs & cache
+*.log
+npm-debug.log*
+.cache
+
+# Editor & OS
+.DS_Store
+.idea/
+*.swp
+*.swo
+*~

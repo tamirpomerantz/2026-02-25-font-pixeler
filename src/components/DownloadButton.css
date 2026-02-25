@@ -1,0 +1,25 @@
+.download-button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.download-button:hover:not(:disabled) {
+  background: #1976d2;
+}
+
+.download-button:active:not(:disabled) {
+  background: #1565c0;
+}
+
+.download-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
