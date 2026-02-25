@@ -33,7 +33,7 @@ function imageDataToDataUrl(imageData, size = 64) {
   return small.toDataURL('image/png')
 }
 
-async function runPipelineForGlyphIndices(fontData, indices, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius) {
+async function runPipelineForGlyphIndices(fontData, indices, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius, slant) {
   const { unitsPerEm, ascender, descender, familyName } = fontData
   const viewBox = {
     minX: 0,
@@ -44,7 +44,7 @@ async function runPipelineForGlyphIndices(fontData, indices, pixelateBlockSize, 
   const glyphsData = []
   for (let i = 0; i < indices.length; i++) {
     const g = fontData.glyphs[indices[i]]
-    const imageData = processGlyphToImageData(g.path, viewBox, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius)
+    const imageData = processGlyphToImageData(g.path, viewBox, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius, slant)
     const svgString = vectorizeImageData(imageData, viewBox, 0)
     if (svgString) {
       glyphsData.push({
@@ -74,6 +74,7 @@ function App() {
   const [pixelateBlockSize, setPixelateBlockSize] = useState(8)
   const [pixelRatio, setPixelRatio] = useState(1)
   const [blurRadius, setBlurRadius] = useState(0)
+  const [slant, setSlant] = useState(0)
   const [shiftX, setShiftX] = useState(0)
   const [shiftY, setShiftY] = useState(0)
   const [processing, setProcessing] = useState(false)
@@ -120,7 +121,7 @@ function App() {
       return
     }
     const run = () => {
-      runPipelineForGlyphIndices(fontData, previewGlyphIndices, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius)
+      runPipelineForGlyphIndices(fontData, previewGlyphIndices, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius, slant)
         .then(({ blob, previewText: text }) => {
           setPreviewFontBlob(blob)
           setPreviewText(text)
@@ -132,7 +133,7 @@ function App() {
     return () => {
       if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current)
     }
-  }, [fontData, previewGlyphIndices, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius])
+  }, [fontData, previewGlyphIndices, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius, slant])
 
   useEffect(() => {
     if (!fontData || fontData.glyphs.length < 4) return
@@ -175,7 +176,7 @@ function App() {
       const glyphsData = []
       for (let i = 0; i < total; i++) {
         const g = fontData.glyphs[i]
-        const imageData = processGlyphToImageData(g.path, viewBox, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius)
+        const imageData = processGlyphToImageData(g.path, viewBox, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius, slant)
         const dataUrl = imageDataToDataUrl(imageData, 80)
         setGenerationGlyphPreviews((prev) => [...prev, { unicode: g.unicode, dataUrl }])
         setGenerationProgress({ current: i + 1, total })
@@ -204,7 +205,7 @@ function App() {
     } finally {
       setProcessing(false)
     }
-  }, [fontData, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius])
+  }, [fontData, pixelateBlockSize, shiftX, shiftY, pixelRatio, blurRadius, slant])
 
   const [previewFontUrl, setPreviewFontUrl] = useState(null)
   useEffect(() => {
@@ -269,6 +270,18 @@ function App() {
                   className="w-24"
                 />
                 <span className="w-8 text-right text-xs text-[var(--color-muted-foreground)]">{blurRadius}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[var(--color-muted-foreground)]">Tilt</span>
+                <Slider
+                  value={[slant]}
+                  onValueChange={([v]) => setSlant(v)}
+                  min={-1}
+                  max={0}
+                  step={0.05}
+                  className="w-24"
+                />
+                <span className="w-8 text-right text-xs text-[var(--color-muted-foreground)]">{slant}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-[var(--color-muted-foreground)]">X</span>

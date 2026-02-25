@@ -75,6 +75,40 @@ export function applyBlur(canvas, radius) {
 }
 
 /**
+ * Applies a horizontal shear (slant/tilt) to the canvas, then crops back to original size.
+ * @param {HTMLCanvasElement} canvas - Input canvas
+ * @param {number} slant - Shear amount (0 = none; positive = top tilts right, italic style)
+ * @returns {HTMLCanvasElement} - New canvas with slant applied, same dimensions
+ */
+export function applySlant(canvas, slant) {
+  if (slant === 0) return canvas;
+  const w = canvas.width;
+  const h = canvas.height;
+  const extra = Math.ceil(Math.abs(slant) * h);
+  const tempW = w + extra;
+  const temp = document.createElement('canvas');
+  temp.width = tempW;
+  temp.height = h;
+  const tempCtx = temp.getContext('2d', { willReadFrequently: true });
+  tempCtx.fillStyle = '#ffffff';
+  tempCtx.fillRect(0, 0, tempW, h);
+  if (slant < 0) tempCtx.translate(-slant * h, 0);
+  tempCtx.transform(1, 0, slant, 1, 0, 0);
+  tempCtx.drawImage(canvas, 0, 0);
+
+  const result = document.createElement('canvas');
+  result.width = w;
+  result.height = h;
+  const resultCtx = result.getContext('2d', { willReadFrequently: true });
+  resultCtx.fillStyle = '#ffffff';
+  resultCtx.fillRect(0, 0, w, h);
+  const centerOffset = (slant * h) / 2;
+  const sx = Math.max(0, Math.min(tempW - w, centerOffset));
+  resultCtx.drawImage(temp, sx, 0, w, h, 0, 0, w, h);
+  return result;
+}
+
+/**
  * Applies pixel offset by drawing the canvas onto a new canvas with translation (keeps same size; edges wrap or stay white).
  * @param {HTMLCanvasElement} canvas - Input canvas
  * @param {number} shiftX - X offset in pixels
@@ -96,7 +130,7 @@ export function applyPixelShift(canvas, shiftX, shiftY) {
 }
 
 /**
- * Full pipeline for one glyph: render -> optional shift -> pixelate -> optional blur -> ImageData.
+ * Full pipeline for one glyph: render -> optional slant -> optional shift -> pixelate -> optional blur -> ImageData.
  * @param {string} svgPath - SVG path in font units
  * @param {Object} viewBox - { minX, minY, w, h }
  * @param {number} pixelateBlockSize - Block size for pixelation (1 = none)
@@ -104,10 +138,14 @@ export function applyPixelShift(canvas, shiftX, shiftY) {
  * @param {number} shiftY - Pixel Y offset before pixelation (0 = none)
  * @param {number} pixelRatio - Width/height of each pixel (1 = square)
  * @param {number} blurRadius - Blur in pixels (0 = none)
+ * @param {number} slant - Horizontal shear / tilt (0 = none)
  * @returns {ImageData} - ImageData ready for vectorizeImageData
  */
-export function processGlyphToImageData(svgPath, viewBox, pixelateBlockSize = 1, shiftX = 0, shiftY = 0, pixelRatio = 1, blurRadius = 0) {
+export function processGlyphToImageData(svgPath, viewBox, pixelateBlockSize = 1, shiftX = 0, shiftY = 0, pixelRatio = 1, blurRadius = 0, slant = 0) {
   let canvas = renderGlyphToCanvas(svgPath, viewBox);
+  if (slant !== 0) {
+    canvas = applySlant(canvas, slant);
+  }
   if (shiftX !== 0 || shiftY !== 0) {
     canvas = applyPixelShift(canvas, shiftX, shiftY);
   }
