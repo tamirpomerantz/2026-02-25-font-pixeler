@@ -2,7 +2,7 @@
 
 Turn any TTF font into a pixelated version and download it as a new TTF.
 
-![Font Pixeler — upload and controls](Screenshot%202026-02-25%20at%209.07.00%20AM.png)
+![Font Pixeler — upload and controls](./screenshot-upload.png)
 
 
 ## Run locally
@@ -21,7 +21,7 @@ Open the URL shown in the terminal (usually `http://localhost:5173`).
 3. **Preview** — A few random glyphs update live as you change settings.
 4. **Export** — Click “Generate full font and download” to process all glyphs and download `pixelated-font.ttf`.
 
-![Font Pixeler — pixelated preview](Screenshot%202026-02-25%20at%209.08.07%20AM.png)
+![Font Pixeler — pixelated preview](./screenshot-preview.png)
 
 
 Install the downloaded font like any other TTF to use it in apps.
